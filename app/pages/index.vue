@@ -1,13 +1,11 @@
 <script setup lang="ts">
-const { contacts } = useAppConfig()
+const { contacts, legal } = useAppConfig()
 
-// При появлении реального домена замените значение на ваш адрес
-// (и продублируйте его в nuxt.config.ts → site.url).
 const siteUrl = 'https://yuristpro1.ru'
 
 const title = 'Разблокировка карт и счетов по 115-ФЗ и 161-ФЗ — юрист | Руслан Ганеев'
 const description =
-  'Заблокировали карту или счёт по 115-ФЗ или 161-ФЗ? Юрист поможет снять блокировку банка, выйти из базы ЦБ РФ и восстановить ДБО. Москва и вся Россия — дистанционно. Бесплатная консультация.'
+  'Юрист по 115-ФЗ и 161-ФЗ: снимем блокировку карты и счёта, выведем из базы ЦБ РФ, восстановим ДБО. Москва и вся Россия — дистанционно. Бесплатная консультация.'
 
 // Вопросы и ответы: используются и в блоке FAQ, и в schema.org (rich-сниппеты)
 const faqItems = [
@@ -42,6 +40,10 @@ const faqItems = [
   {
     q: 'Какие документы понадобятся для разблокировки?',
     a: 'Обычно это уведомление или запрос от банка, выписки по счёту, документы о происхождении средств (договоры, справки о доходах, чеки). Точный список зависит от ситуации — подскажу, что именно нужно, на консультации.',
+  },
+  {
+    q: 'Как выйти из чёрного списка банков (списка отказников)?',
+    a: 'Если банк отказал в обслуживании по 115-ФЗ, сведения могут попасть в межбанковский «список отказников» (стоп-лист) ЦБ, и другие банки тоже начинают отказывать в открытии счетов и переводах. Это исправимо: я готовлю заявление о реабилитации клиента, собираю подтверждающие документы и добиваюсь исключения из списка отказников и восстановления нормального обслуживания.',
   },
 ]
 
@@ -83,8 +85,21 @@ const jsonLd = {
         },
       ],
       provider: { '@id': `${siteUrl}/#person` },
+      founder: { '@id': `${siteUrl}/#person` },
+      ...(legal?.inn ? { taxID: legal.inn } : {}),
+      contactPoint: [
+        {
+          '@type': 'ContactPoint',
+          telephone: contacts.phoneHref,
+          contactType: 'customer service',
+          areaServed: 'RU',
+          availableLanguage: 'Russian',
+        },
+      ],
       sameAs: [
         contacts.vk,
+        contacts.telegram,
+        contacts.telegramChannel,
         contacts.avito,
         contacts.tiktok,
         contacts.instagram,
@@ -107,9 +122,18 @@ const jsonLd = {
         'противодействие легализации доходов',
         'дистанционное банковское обслуживание',
       ],
+      image: `${siteUrl}/ruslan-ganeev.jpg`,
       url: `${siteUrl}/`,
-      telephone: contacts.phone,
-      areaServed: 'RU',
+      telephone: contacts.phoneHref,
+      areaServed: { '@type': 'Country', name: 'Россия' },
+      worksFor: { '@id': `${siteUrl}/#business` },
+      sameAs: [
+        contacts.telegram,
+        contacts.telegramChannel,
+        contacts.vk,
+        contacts.tiktok,
+        contacts.instagram,
+      ].filter(Boolean),
     },
     {
       '@type': 'WebSite',
@@ -131,10 +155,20 @@ const jsonLd = {
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
         name: 'Услуги по разблокировке карт и счетов',
-        itemListElement: serviceNames.map((name) => ({
-          '@type': 'Offer',
-          itemOffered: { '@type': 'Service', name },
-        })),
+        itemListElement: [
+          {
+            '@type': 'Offer',
+            name: 'Первичная консультация',
+            price: '0',
+            priceCurrency: 'RUB',
+            availability: 'https://schema.org/InStock',
+            itemOffered: { '@type': 'Service', name: 'Консультация по разблокировке карт и счетов' },
+          },
+          ...serviceNames.map((name) => ({
+            '@type': 'Offer',
+            itemOffered: { '@type': 'Service', name },
+          })),
+        ],
       },
     },
     {

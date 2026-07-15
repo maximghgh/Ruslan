@@ -92,7 +92,7 @@ onBeforeUnmount(() => {
           :aria-label="`Открыть на весь экран: ${c.title}`"
           @click="lightbox = c"
         >
-          <img :src="asset(c.img)" :alt="c.title" loading="lazy" />
+          <img :src="asset(c.img)" :alt="c.title" loading="lazy" decoding="async" />
           <span class="case__zoom" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" /><path d="M16.5 16.5 21 21M11 8v6M8 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
           </span>
@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
             <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
           </button>
           <figure class="lb__figure" @click.stop>
-            <img :src="asset(lightbox.img)" :alt="lightbox.title" />
+            <img :src="asset(lightbox.img)" :alt="lightbox.title" decoding="async" />
             <figcaption class="lb__caption">{{ lightbox.title }}</figcaption>
           </figure>
         </div>

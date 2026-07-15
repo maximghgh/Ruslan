@@ -30,6 +30,8 @@ let ctx: CanvasRenderingContext2D | null = null
 let particles: Particle[] = []
 let icons: IconParticle[] = []
 let frame = 0
+let running = false
+let io: IntersectionObserver | null = null
 let lastFrameTime = 0
 let gradientTime = 0
 let canvasWidth = 0
@@ -208,7 +210,7 @@ function draw(timestamp: number) {
   if (!canvas.value || !ctx) return
 
   if (timestamp - lastFrameTime < maxFpsInterval) {
-    frame = requestAnimationFrame(draw)
+    if (running) frame = requestAnimationFrame(draw)
     return
   }
 
@@ -255,7 +257,20 @@ function draw(timestamp: number) {
 
   icons.forEach(drawIcon)
 
-  frame = requestAnimationFrame(draw)
+  if (running) frame = requestAnimationFrame(draw)
+}
+
+function start() {
+  if (running) return
+  running = true
+  frame = requestAnimationFrame((timestamp) => {
+    lastFrameTime = timestamp - maxFpsInterval
+    draw(timestamp)
+  })
+}
+function stop() {
+  running = false
+  cancelAnimationFrame(frame)
 }
 
 function handleMouseMove(event: MouseEvent) {
@@ -291,14 +306,21 @@ onMounted(async () => {
   window.addEventListener('resize', resize, { passive: true })
   window.addEventListener('mousemove', handleMouseMove, { passive: true })
   window.addEventListener('mouseleave', handleMouseLeave, { passive: true })
-  frame = requestAnimationFrame((timestamp) => {
-    lastFrameTime = timestamp - maxFpsInterval
-    draw(timestamp)
-  })
+
+  // Крутим анимацию только когда hero виден — вне вьюпорта rAF-цикл останавливается.
+  io = new IntersectionObserver(
+    ([entry]) => {
+      if (entry?.isIntersecting) start()
+      else stop()
+    },
+    { threshold: 0 },
+  )
+  io.observe(canvas.value)
 })
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(frame)
+  stop()
+  io?.disconnect()
   if (import.meta.client) {
     window.removeEventListener('resize', resize)
     window.removeEventListener('mousemove', handleMouseMove)

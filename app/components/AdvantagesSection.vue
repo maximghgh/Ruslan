@@ -66,7 +66,7 @@ useScrollAnimation(sectionRef, { mode: 'scale-in', stagger: 0.1 })
           <figure class="expert__media">
             <img
               :src="asset('/ruslan-ganeev.jpg')"
-              alt="Руслан Ганеев"
+              alt="Руслан Ганеев — специалист по разблокировке банковских карт и счетов по 115-ФЗ и 161-ФЗ"
               loading="lazy"
               decoding="async"
             >

@@ -1,7 +1,16 @@
 <script setup lang="ts">
-const { contacts } = useAppConfig()
+const { contacts, legal } = useAppConfig()
 const year = new Date().getFullYear()
 const socialLinks = useSocials()
+
+// Реквизиты исполнителя (показываются, только когда заполнены в app.config.ts → legal).
+const requisites = computed(() => {
+  const parts: string[] = []
+  if (legal?.status && legal?.fullName) parts.push(`${legal.status} ${legal.fullName}`)
+  if (legal?.inn) parts.push(`ИНН ${legal.inn}`)
+  if (legal?.ogrnip) parts.push(`ОГРНИП ${legal.ogrnip}`)
+  return parts.join(', ')
+})
 
 // В подвале «Telegram-канал» показываем первым.
 const footerSocials = computed(() => {
@@ -43,12 +52,14 @@ const contactLinks = [
             Снятие блокировки, вывод из базы ЦБ РФ, восстановление доступа к деньгам.
             Москва и вся Россия — дистанционно.
           </p>
-          <a href="#kontakty" class="btn btn--white">Получить консультацию</a>
+          <a href="#kontakty" class="btn btn--white" @click="reachGoal('cta_click', { place: 'footer' })">Получить консультацию</a>
         </div>
 
         <nav class="ftr__col" aria-label="Разделы сайта">
           <h4 class="ftr__col-title">Разделы</h4>
           <a v-for="l in navLinks" :key="l.href" :href="l.href" class="ftr__link">{{ l.label }}</a>
+          <NuxtLink to="/keysy" class="ftr__link">Все кейсы</NuxtLink>
+          <NuxtLink to="/politika-konfidencialnosti" class="ftr__link">Политика конфиденциальности</NuxtLink>
         </nav>
 
         <div class="ftr__col">
@@ -68,10 +79,12 @@ const contactLinks = [
       <div class="ftr__bottom">
         <div>
           <p class="ftr__copy">© {{ year }} Руслан Ганеев. Разблокировка карт и счетов по 115-ФЗ и 161-ФЗ.</p>
+          <p v-if="requisites" class="ftr__legal ftr__legal--req">{{ requisites }}</p>
           <p class="ftr__legal">
             Информация на сайте носит справочный характер и не является публичной офертой.
             Услуги оказываются на основании договора. Отправляя формы на сайте,
-            вы соглашаетесь с обработкой персональных данных.
+            вы соглашаетесь с обработкой
+            <NuxtLink to="/politika-konfidencialnosti" class="ftr__legal-link">персональных данных</NuxtLink>.
           </p>
         </div>
 
@@ -145,6 +158,9 @@ const contactLinks = [
 }
 .ftr__copy { font-size: 14px; color: #97a6bd; font-weight: 600; }
 .ftr__legal { font-size: 12.5px; color: #6f8099; line-height: 1.6; max-width: 760px; }
+.ftr__legal--req { margin-bottom: 6px; color: #8294ad; }
+.ftr__legal-link { color: #97a6bd; text-decoration: underline; }
+.ftr__legal-link:hover { color: #fff; }
 .ftr__socials {
   display: flex;
   flex-wrap: wrap;

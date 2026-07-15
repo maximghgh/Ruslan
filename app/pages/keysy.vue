@@ -8,19 +8,61 @@ const title = `Кейсы разблокировки карт и счетов ($
 const description =
   `Более ${total} документально подтверждённых разблокировок банковских карт и счетов по 115-ФЗ и 161-ФЗ: ответы банков и Банка России о снятии ограничений и исключении из базы ЦБ РФ.`
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Главная', item: `${siteUrl}/` },
+        { '@type': 'ListItem', position: 2, name: 'Кейсы', item: `${siteUrl}/keysy/` },
+      ],
+    },
+    {
+      '@type': 'CollectionPage',
+      '@id': `${siteUrl}/keysy/#collection`,
+      url: `${siteUrl}/keysy/`,
+      name: title,
+      description,
+      inLanguage: 'ru-RU',
+      isPartOf: { '@id': `${siteUrl}/#website` },
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: total,
+        itemListElement: cases.map((c, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'ImageObject',
+            name: c.title,
+            caption: c.text,
+            contentUrl: `${siteUrl}${c.img}`,
+          },
+        })),
+      },
+    },
+  ],
+}
+
 useSeoMeta({
   title,
   description,
   ogTitle: title,
   ogDescription: description,
   ogType: 'website',
-  ogUrl: `${siteUrl}/keysy`,
+  ogUrl: `${siteUrl}/keysy/`,
   ogImage: `${siteUrl}/og-image.png`,
   ogLocale: 'ru_RU',
   robots: 'index, follow, max-image-preview:large',
 })
 useHead({
-  link: [{ rel: 'canonical', href: `${siteUrl}/keysy` }],
+  link: [{ rel: 'canonical', href: `${siteUrl}/keysy/` }],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+    },
+  ],
 })
 </script>
 
@@ -35,7 +77,7 @@ useHead({
       <div class="section-head keyspage__head">
         <p class="eyebrow">Кейсы</p>
         <h1 class="section-title">
-          <span class="keyspage__num">{{ total }}</span> подтверждённых разблокировок
+          <span class="keyspage__num">{{ total }}</span> подтверждённых разблокировок карт и счетов по 115-ФЗ и 161-ФЗ
         </h1>
         <p class="section-subtitle">
           Реальные ответы банков и Центрального банка РФ о снятии блокировок по 115-ФЗ и 161-ФЗ.
@@ -43,6 +85,7 @@ useHead({
         </p>
       </div>
 
+      <h2 class="sr-only">Галерея подтверждённых кейсов разблокировки карт и счетов</h2>
       <CasesGrid :items="cases" :filters="true" />
     </div>
   </section>

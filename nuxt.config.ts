@@ -9,9 +9,18 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
-  modules: ['@nuxtjs/sitemap', '@nuxtjs/robots'],
+  modules: ['@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxt/fonts'],
 
   css: ['~/assets/css/main.css'],
+
+  // Шрифты хостятся локально (скачиваются на этапе сборки), с кириллицей и font-display:swap.
+  // Это убирает render-blocking внешний Google Fonts и его ненадёжность из РФ.
+  fonts: {
+    families: [
+      { name: 'Manrope', provider: 'google', weights: [400, 500, 600, 700, 800], subsets: ['cyrillic', 'latin'] },
+      { name: 'Unbounded', provider: 'google', weights: [600, 700, 800], subsets: ['cyrillic', 'latin'] },
+    ],
+  },
 
   // Общие SEO-настройки сайта. URL замените на ваш реальный домен,
   // когда он появится — он используется в canonical, sitemap.xml и robots.txt.
@@ -22,6 +31,9 @@ export default defineNuxtConfig({
       'Профессиональная помощь в разблокировке банковских карт и счетов по 115-ФЗ и 161-ФЗ. Снятие блокировки, вывод из базы ЦБ РФ, восстановление ДБО. Москва и вся Россия — дистанционно.',
     defaultLocale: 'ru',
     indexable: true,
+    // GitHub Pages отдаёт статические страницы со слэшем (/keysy/) — приводим
+    // canonical, sitemap и og:url к одному виду, чтобы не было дублей.
+    trailingSlash: true,
   },
 
   app: {
@@ -39,12 +51,12 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: `${baseURL}favicon-32x32.png` },
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: `${baseURL}favicon-16x16.png` },
         { rel: 'apple-touch-icon', sizes: '180x180', href: `${baseURL}apple-touch-icon.png` },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@600;700;800&display=swap',
-        },
+        { rel: 'manifest', href: `${baseURL}site.webmanifest` },
+        // Ускоряем соединение с доменами аналитики (Метрика → mc.yandex.ru, GA → googletagmanager).
+        { rel: 'preconnect', href: 'https://mc.yandex.ru', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://mc.yandex.ru' },
+        { rel: 'preconnect', href: 'https://www.googletagmanager.com' },
+        { rel: 'dns-prefetch', href: 'https://www.googletagmanager.com' },
       ],
     },
   },
@@ -63,10 +75,17 @@ export default defineNuxtConfig({
   routeRules: {
     '/': { prerender: true },
     '/keysy': { prerender: true },
+    '/politika-konfidencialnosti': { prerender: true },
   },
 
   sitemap: {
-    urls: ['/', '/keysy'],
+    autoLastmod: true,
+    defaults: { changefreq: 'monthly', priority: 0.7 },
+    urls: [
+      { loc: '/', priority: 1.0, changefreq: 'weekly' },
+      { loc: '/keysy/', priority: 0.8, changefreq: 'weekly' },
+      { loc: '/politika-konfidencialnosti/', priority: 0.3, changefreq: 'yearly' },
+    ],
   },
 
   robots: {

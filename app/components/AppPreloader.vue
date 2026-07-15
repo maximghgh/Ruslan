@@ -12,36 +12,31 @@ onMounted(async () => {
   }
 
   sessionStorage.setItem('ruslan-preloader-seen', '1')
-  document.body.classList.add('is-preloading')
+
+  const dismiss = () => { visible.value = false }
+  // Страховка: даже если анимация не доиграет, прелоадер уберётся и не закроет контент.
+  const fallback = window.setTimeout(dismiss, 1200)
 
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   if (prefersReduced) {
-    window.setTimeout(() => {
-      visible.value = false
-      document.body.classList.remove('is-preloading')
-    }, 180)
+    window.setTimeout(dismiss, 150)
     return
   }
 
   const { gsap } = await import('gsap')
 
+  // Короткое неблокирующее интро (~0.7 c): не держим scroll-lock и быстро уводим оверлей,
+  // чтобы не задерживать LCP реального контента (портрет уже есть в HTML).
   gsap
     .timeline({
       defaults: { ease: 'power2.out' },
-      onComplete: () => {
-        visible.value = false
-        document.body.classList.remove('is-preloading')
-      },
+      onComplete: () => { window.clearTimeout(fallback); dismiss() },
     })
-    .fromTo(title.value, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.72 })
-    .fromTo(subtitle.value, { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.5 }, '-=0.34')
-    .fromTo(line.value, { scaleX: 0 }, { scaleX: 1, duration: 0.95, transformOrigin: 'left center' }, '-=0.2')
-    .to(preloader.value, { yPercent: -100, duration: 0.86, ease: 'power2.inOut' }, 1.8)
-})
-
-onBeforeUnmount(() => {
-  if (import.meta.client) document.body.classList.remove('is-preloading')
+    .fromTo(title.value, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.42 })
+    .fromTo(subtitle.value, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.32 }, '-=0.22')
+    .fromTo(line.value, { scaleX: 0 }, { scaleX: 1, duration: 0.5, transformOrigin: 'left center' }, '-=0.28')
+    .to(preloader.value, { yPercent: -100, duration: 0.5, ease: 'power2.inOut' }, 0.2)
 })
 </script>
 

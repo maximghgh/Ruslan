@@ -26,23 +26,40 @@ const methods = [
 const sectionRef = ref<HTMLElement | null>(null)
 useScrollAnimation(sectionRef, { mode: 'stagger-children', stagger: 0.1 })
 
-const ways = ['Телефон', 'ВКонтакте', 'Авито', 'TikTok', 'Instagram', 'MAX']
+const ways = ['Телефон', 'Телеграм', 'ВКонтакте', 'MAX', 'Email']
+
+// Для этих способов связи нужен никнейм/ссылка — чтобы найти клиента в мессенджере.
+const NICK_WAYS = ['Телеграм', 'ВКонтакте', 'MAX']
+const needsNickname = computed(() => NICK_WAYS.includes(form.way))
+const needsEmail = computed(() => form.way === 'Email')
+const nicknamePlaceholder = computed(() => {
+  if (form.way === 'Телеграм') return '@username или ссылка t.me/…'
+  if (form.way === 'ВКонтакте') return 'Ссылка на профиль или короткое имя'
+  if (form.way === 'MAX') return 'Ваш ник или ссылка в MAX'
+  return 'Ваш никнейм'
+})
 
 const form = reactive({
   name: '',
   phone: '',
   way: '',
+  nickname: '',
+  contactEmail: '',
   bank: '',
   message: '',
   consent: false,
   company: '', // honeypot — поле-ловушка для спам-ботов
 })
 
-const errors = reactive<{ name: string; phone: string; consent: string }>({
+const errors = reactive<{ name: string; phone: string; consent: string; contact: string }>({
   name: '',
   phone: '',
   consent: '',
+  contact: '',
 })
+
+// При смене способа связи сбрасываем ошибку доп-поля (ник/email).
+watch(() => form.way, () => { errors.contact = '' })
 
 const loading = ref(false)
 const sent = ref(false)
@@ -80,7 +97,18 @@ function validate() {
   errors.phone =
     form.phone.replace(/\D/g, '').length >= 10 ? '' : 'Укажите корректный номер телефона'
   errors.consent = form.consent ? '' : 'Подтвердите согласие на обработку данных'
-  return !errors.name && !errors.phone && !errors.consent
+
+  // Доп-поле обязательно, если выбран способ связи, требующий контакт.
+  errors.contact = ''
+  if (needsNickname.value && !form.nickname.trim()) {
+    errors.contact = `Укажите ник или ссылку в ${form.way}`
+  } else if (needsEmail.value) {
+    const em = form.contactEmail.trim()
+    if (!em) errors.contact = 'Укажите email для ответа'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) errors.contact = 'Укажите корректный email'
+  }
+
+  return !errors.name && !errors.phone && !errors.consent && !errors.contact
 }
 
 // Заявки уходят на почту через FormSubmit.co (без сервера — работает на GitHub Pages).
@@ -111,29 +139,37 @@ async function submit() {
 
   loading.value = true
   try {
-    // FormSubmit отдаёт JSON, но с заголовком text/html — поэтому форсим JSON-разбор
-    // и на всякий случай парсим строку вручную.
-    const raw = await $fetch<unknown>(FORM_ENDPOINT, {
-      method: 'POST',
-      responseType: 'json',
-      headers: { Accept: 'application/json' },
-      body: {
-        'Имя': form.name,
-        'Телефон': form.phone,
-        'Способ связи': form.way || 'не указан',
-        'Банк': form.bank || 'не указан',
-        'Сообщение': form.message || 'не указано',
-        _subject: `Заявка на разблокировку — ${form.name}, ${form.phone}`,
-        _template: 'table',
-        _captcha: 'false',
-      },
-    })
-
+    // Нативный fetch — надёжнее ofetch для ответа FormSubmit (приходит text/html, а не json,
+    // из-за чего $fetch зависал). AbortController — предохранитель от «вечного» ожидания.
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 15000)
     let res: { success?: string | boolean; message?: string } = {}
-    if (typeof raw === 'string') {
-      try { res = JSON.parse(raw) } catch { res = {} }
-    } else if (raw && typeof raw === 'object') {
-      res = raw as { success?: string | boolean; message?: string }
+    try {
+      const resp = await fetch(FORM_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          'Имя': form.name,
+          'Телефон': form.phone,
+          'Способ связи': form.way || 'не указан',
+          ...(needsNickname.value && form.nickname.trim()
+            ? { 'Ник для связи': form.nickname.trim() }
+            : {}),
+          ...(needsEmail.value && form.contactEmail.trim()
+            ? { 'Email для связи': form.contactEmail.trim(), _replyto: form.contactEmail.trim() }
+            : {}),
+          'Банк': form.bank || 'не указан',
+          'Сообщение': form.message || 'не указано',
+          _subject: `Заявка на разблокировку — ${form.name}, ${form.phone}`,
+          _template: 'table',
+          _captcha: 'false',
+        }),
+      })
+      const text = await resp.text()
+      try { res = JSON.parse(text) } catch { res = {} }
+    } finally {
+      clearTimeout(timer)
     }
 
     if (res.success === true || res.success === 'true') {
@@ -157,6 +193,8 @@ function resetForm() {
     name: '',
     phone: '',
     way: '',
+    nickname: '',
+    contactEmail: '',
     bank: '',
     message: '',
     consent: false,
@@ -189,6 +227,7 @@ function resetForm() {
             Первичная консультация — бесплатно и ни к чему не обязывает.
           </p>
 
+          <address class="contact__contacts">
           <ul class="methods">
             <li v-for="m in methods" :key="m.label">
               <a
@@ -219,6 +258,7 @@ function resetForm() {
               <span>{{ contacts.schedule }}</span>
             </div>
           </div>
+          </address>
         </div>
 
         <div class="form-card" data-reveal-item data-scroll-mode="fade-right">
@@ -234,20 +274,23 @@ function resetForm() {
             </div>
 
             <div class="field">
-              <label for="f-name">Ваше имя <span>*</span></label>
+              <label for="f-name">Ваше имя <span aria-hidden="true">*</span></label>
               <input
                 id="f-name"
                 v-model="form.name"
                 type="text"
                 autocomplete="name"
+                aria-required="true"
+                :aria-invalid="errors.name ? 'true' : undefined"
+                :aria-describedby="errors.name ? 'err-name' : undefined"
                 placeholder="Как к вам обращаться"
                 :class="{ 'is-error': errors.name }"
               />
-              <span v-if="errors.name" class="field__err">{{ errors.name }}</span>
+              <span v-if="errors.name" id="err-name" role="alert" class="field__err">{{ errors.name }}</span>
             </div>
 
             <div class="field">
-              <label for="f-phone">Телефон <span>*</span></label>
+              <label for="f-phone">Телефон <span aria-hidden="true">*</span></label>
               <input
                 id="f-phone"
                 :value="form.phone"
@@ -255,11 +298,14 @@ function resetForm() {
                 inputmode="tel"
                 autocomplete="tel"
                 maxlength="18"
+                aria-required="true"
+                :aria-invalid="errors.phone ? 'true' : undefined"
+                :aria-describedby="errors.phone ? 'err-phone' : undefined"
                 placeholder="+7 (___) ___-__-__"
                 :class="{ 'is-error': errors.phone }"
                 @input="onPhoneInput"
               />
-              <span v-if="errors.phone" class="field__err">{{ errors.phone }}</span>
+              <span v-if="errors.phone" id="err-phone" role="alert" class="field__err">{{ errors.phone }}</span>
             </div>
 
             <div class="field">
@@ -268,6 +314,37 @@ function resetForm() {
                 <option value="">Не важно</option>
                 <option v-for="w in ways" :key="w" :value="w">{{ w }}</option>
               </select>
+            </div>
+
+            <div v-if="needsNickname" class="field field--nick">
+              <label for="f-nick">Ваш ник / ссылка в {{ form.way }} <span>*</span></label>
+              <input
+                id="f-nick"
+                v-model="form.nickname"
+                type="text"
+                autocomplete="off"
+                :placeholder="nicknamePlaceholder"
+                :class="{ 'is-error': errors.contact }"
+                :aria-invalid="errors.contact ? 'true' : undefined"
+              />
+              <span v-if="errors.contact" role="alert" class="field__err">{{ errors.contact }}</span>
+              <span v-else class="field__hint">Укажите ник или ссылку — чтобы я нашёл вас в {{ form.way }} и написал.</span>
+            </div>
+
+            <div v-if="needsEmail" class="field field--nick">
+              <label for="f-cemail">Ваш email для ответа <span>*</span></label>
+              <input
+                id="f-cemail"
+                v-model="form.contactEmail"
+                type="email"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="you@example.com"
+                :class="{ 'is-error': errors.contact }"
+                :aria-invalid="errors.contact ? 'true' : undefined"
+              />
+              <span v-if="errors.contact" role="alert" class="field__err">{{ errors.contact }}</span>
+              <span v-else class="field__hint">На этот адрес я отвечу на вашу заявку.</span>
             </div>
 
             <div class="field">
@@ -291,10 +368,18 @@ function resetForm() {
             </div>
 
             <label class="consent" :class="{ 'is-error': errors.consent }">
-              <input v-model="form.consent" type="checkbox" />
-              <span>Я согласен на обработку персональных данных для ответа на заявку.</span>
+              <input
+                v-model="form.consent"
+                type="checkbox"
+                aria-required="true"
+                :aria-invalid="errors.consent ? 'true' : undefined"
+                :aria-describedby="errors.consent ? 'err-consent' : undefined"
+              />
+              <span>Я согласен на обработку
+                <NuxtLink to="/politika-konfidencialnosti" target="_blank" class="consent__link" @click.stop>персональных данных</NuxtLink>
+                для ответа на заявку.</span>
             </label>
-            <span v-if="errors.consent" class="field__err field__err--block">{{ errors.consent }}</span>
+            <span v-if="errors.consent" id="err-consent" role="alert" class="field__err field__err--block">{{ errors.consent }}</span>
 
             <button type="submit" class="btn btn--primary btn--block btn--lg" :disabled="loading">
               <template v-if="loading">Отправляем…</template>
@@ -304,10 +389,11 @@ function resetForm() {
               </template>
             </button>
 
-            <p v-if="serverError" class="form__status form__status--err">{{ serverError }}</p>
+            <p v-if="serverError" class="form__status form__status--err" role="alert" aria-live="assertive">{{ serverError }}</p>
 
             <p class="form__note">
-              Отправляя заявку, вы соглашаетесь с обработкой персональных данных.
+              Отправляя заявку, вы соглашаетесь с обработкой
+              <NuxtLink to="/politika-konfidencialnosti" target="_blank" class="form__note-link">персональных данных</NuxtLink>.
               Консультация бесплатна и ни к чему не обязывает.
             </p>
           </form>
@@ -459,6 +545,17 @@ function resetForm() {
 }
 .field__err { font-size: 12.5px; color: #e5484d; margin-top: 5px; font-weight: 600; }
 .field__err--block { display: block; margin-top: -6px; margin-bottom: 8px; }
+.field__hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+/* Плавное появление поля никнейма (CSS-анимация на монтировании — надёжнее Transition) */
+.field--nick { animation: nickReveal .28s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes nickReveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field--nick { animation: none; }
+}
 
 .consent {
   display: flex;
@@ -473,6 +570,11 @@ function resetForm() {
 }
 .consent span { font-size: 13px; color: var(--text); }
 .consent.is-error span { color: #e5484d; }
+.consent__link { color: var(--blue-700); text-decoration: underline; }
+.form__note-link { color: var(--blue-700); text-decoration: underline; }
+
+/* Контакты в семантическом <address> — убираем курсив по умолчанию */
+.contact__contacts { font-style: normal; display: block; }
 
 .form__status {
   margin-top: 13px;

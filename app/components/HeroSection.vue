@@ -9,6 +9,21 @@ const { $lenis } = useNuxtApp()
 const baseURL = useRuntimeConfig().app.baseURL
 const asset = (path: string) => baseURL.replace(/\/$/, '') + path
 
+// Предзагрузка LCP-изображения первого экрана (портрет) — стартует загрузку в самом
+// начале, до обработки компонентов. srcset/sizes совпадают с <source> ниже.
+useHead({
+  link: [
+    {
+      rel: 'preload',
+      as: 'image',
+      type: 'image/webp',
+      imagesrcset: `${asset('/ruslan-hero.webp')} 760w, ${asset('/ruslan-hero@2x.webp')} 1120w`,
+      imagesizes: '(min-width: 960px) 460px, 88vw',
+      fetchpriority: 'high',
+    },
+  ],
+})
+
 const titleWords = ['Разблокировка', 'карт', 'и', 'счетов', 'по', '115-ФЗ', 'и', '161-ФЗ']
 const titleText = titleWords.join(' ')
 
@@ -70,6 +85,10 @@ function formatStat(index: number, value: number) {
 onMounted(async () => {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const isMobile = window.matchMedia('(max-width: 767px)').matches
+  // Прячем элементы под анимацию, только когда JS реально стартовал. Без этого класса
+  // (нет JS / до гидратации) текст первого экрана виден сразу — LCP не блокируется,
+  // и заголовок не «пропадает», если скрипт не выполнится.
+  if (!prefersReduced) document.documentElement.classList.add('js-hero-anim')
   const { gsap } = await import('gsap')
 
   const words = titleRef.value?.querySelectorAll('.hero__word') ?? []
@@ -197,11 +216,11 @@ onBeforeUnmount(() => {
         </p>
 
         <div ref="actionsRef" class="hero__actions">
-          <a href="#kontakty" class="btn btn--primary btn--lg">
+          <a href="#kontakty" class="btn btn--primary btn--lg" @click="reachGoal('cta_click', { place: 'hero' })">
             Получить консультацию
             <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </a>
-          <a :href="`tel:${contacts.phoneHref}`" class="btn btn--outline btn--lg">
+          <a :href="`tel:${contacts.phoneHref}`" class="btn btn--outline btn--lg" @click="trackContact('phone')">
             <svg viewBox="0 0 24 24" fill="none"><path d="M6.6 3.5c.5 0 .9.3 1 .8l.9 3.2c.1.4 0 .9-.3 1.2L7 10.3a14 14 0 0 0 6.7 6.7l1.6-2.2c.3-.3.8-.4 1.2-.3l3.2.9c.5.1.8.5.8 1V20a1.5 1.5 0 0 1-1.6 1.5C10.8 21 3 13.2 2.5 4.6A1.5 1.5 0 0 1 4 3h2.6Z" fill="currentColor" /></svg>
             Позвонить
           </a>
@@ -324,10 +343,14 @@ onBeforeUnmount(() => {
 .hero__word {
   display: inline-block;
   margin-right: .2em;
-  opacity: 0;
-  transform: translateY(40px);
   will-change: opacity, transform;
 }
+/* Начальные состояния анимации применяются только при активном JS (см. onMounted). */
+.js-hero-anim .hero__word { opacity: 0; transform: translateY(40px); }
+.js-hero-anim .hero__lead,
+.js-hero-anim .hero__actions { opacity: 0; transform: translateY(22px); }
+.js-hero-anim .hero__trust li { opacity: 0; }
+.js-hero-anim .hero-badge { opacity: 0; }
 .hero__word--accent {
   background: linear-gradient(100deg, var(--blue-600), var(--cyan));
   -webkit-background-clip: text;
@@ -338,8 +361,6 @@ onBeforeUnmount(() => {
   font-size: 17px;
   max-width: 540px;
   margin-bottom: 26px;
-  opacity: 0;
-  transform: translateY(22px);
 }
 .hero__lead strong { color: var(--ink); }
 
@@ -348,15 +369,12 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 26px;
-  opacity: 0;
-  transform: translateY(22px);
 }
 
 .hero__trust { display: grid; gap: 10px; }
 .hero__trust li {
   display: flex; align-items: center; gap: 10px;
   font-size: 15px; font-weight: 600; color: var(--ink);
-  opacity: 0;
 }
 .hero__trust svg { width: 21px; height: 21px; flex: none; }
 
@@ -460,7 +478,6 @@ onBeforeUnmount(() => {
     0 26px 54px rgba(11, 28, 58, .22),
     0 6px 16px rgba(11, 28, 58, .12),
     inset 0 0 0 1px rgba(255, 255, 255, .6);
-  opacity: 0;
 }
 .hero-badge--unlock {
   top: 56%;

@@ -1,5 +1,4 @@
 import Lenis from 'lenis'
-import { gsap } from 'gsap'
 
 declare module '#app' {
   interface NuxtApp {
@@ -25,10 +24,16 @@ export default defineNuxtPlugin(() => {
     wheelMultiplier: 0.9,
   })
 
-  gsap.ticker.add((time) => {
-    lenis.raf(time * 1000)
-  })
-  gsap.ticker.lagSmoothing(0)
+  // Нативный rAF-цикл вместо gsap.ticker — чтобы GSAP не тянулся в основной бандл,
+  // а оставался только в лениво-подгружаемых чанках (Hero/Preloader).
+  // Таймстамп rAF уже в миллисекундах, поэтому *1000 не нужно.
+  let rafId = 0
+  const raf = (time: number) => {
+    lenis.raf(time)
+    rafId = requestAnimationFrame(raf)
+  }
+  rafId = requestAnimationFrame(raf)
+  void rafId
 
   // Удобный доступ для отладки в dev (в проде не выполняется).
   if (import.meta.dev) {

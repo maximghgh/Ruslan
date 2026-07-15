@@ -53,20 +53,20 @@ onBeforeUnmount(() => {
       </nav>
 
       <div class="hdr__actions">
-        <a :href="`tel:${contacts.phoneHref}`" class="hdr__phone">
+        <a :href="`tel:${contacts.phoneHref}`" class="hdr__phone" @click="trackContact('phone')">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6.6 3.5c.5 0 .9.3 1 .8l.9 3.2c.1.4 0 .9-.3 1.2L7 10.3a14 14 0 0 0 6.7 6.7l1.6-2.2c.3-.3.8-.4 1.2-.3l3.2.9c.5.1.8.5.8 1V20a1.5 1.5 0 0 1-1.6 1.5C10.8 21 3 13.2 2.5 4.6A1.5 1.5 0 0 1 4 3h2.6Z" fill="currentColor" />
           </svg>
           <span>{{ contacts.phone }}</span>
         </a>
-        <a :href="anchor('#kontakty')" class="btn btn--primary hdr__cta">Оставить заявку</a>
+        <a :href="anchor('#kontakty')" class="btn btn--primary hdr__cta" @click="reachGoal('cta_click', { place: 'header' })">Оставить заявку</a>
       </div>
 
       <button
         class="burger"
         :class="{ 'burger--open': open }"
         :aria-expanded="open"
-        aria-label="Открыть меню"
+        :aria-label="open ? 'Закрыть меню' : 'Открыть меню'"
         @click="open = !open"
       >
         <span /><span /><span />
@@ -76,8 +76,8 @@ onBeforeUnmount(() => {
     <Transition name="mnav">
       <nav v-if="open" class="mnav" aria-label="Мобильное меню">
         <a v-for="l in links" :key="l.href" :href="anchor(l.href)" class="mnav__link" @click="close">{{ l.label }}</a>
-        <a :href="`tel:${contacts.phoneHref}`" class="mnav__phone" @click="close">{{ contacts.phone }}</a>
-        <a :href="anchor('#kontakty')" class="btn btn--primary btn--block btn--lg" @click="close">Оставить заявку</a>
+        <a :href="`tel:${contacts.phoneHref}`" class="mnav__phone" @click="close(); trackContact('phone')">{{ contacts.phone }}</a>
+        <a :href="anchor('#kontakty')" class="btn btn--primary btn--block btn--lg" @click="close(); reachGoal('cta_click', { place: 'header' })">Оставить заявку</a>
       </nav>
     </Transition>
   </header>
