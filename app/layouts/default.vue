@@ -10,6 +10,7 @@
     <SiteFooter />
     <ClientOnly>
       <QuickContact />
+      <CookieConsent />
     </ClientOnly>
   </div>
 </template>

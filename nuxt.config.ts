@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   // Общие SEO-настройки сайта. URL замените на ваш реальный домен,
   // когда он появится — он используется в canonical, sitemap.xml и robots.txt.
   site: {
-    url: 'https://yuristpro1.ru',
+    url: 'https://yuristpro1.site',
     name: 'Разблокировка карт и счетов по 115-ФЗ и 161-ФЗ — Руслан Ганеев',
     description:
       'Профессиональная помощь в разблокировке банковских карт и счетов по 115-ФЗ и 161-ФЗ. Снятие блокировки, вывод из базы ЦБ РФ, восстановление ДБО. Москва и вся Россия — дистанционно.',
@@ -52,11 +52,8 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: `${baseURL}favicon-16x16.png` },
         { rel: 'apple-touch-icon', sizes: '180x180', href: `${baseURL}apple-touch-icon.png` },
         { rel: 'manifest', href: `${baseURL}site.webmanifest` },
-        // Ускоряем соединение с доменами аналитики (Метрика → mc.yandex.ru, GA → googletagmanager).
-        { rel: 'preconnect', href: 'https://mc.yandex.ru', crossorigin: '' },
-        { rel: 'dns-prefetch', href: 'https://mc.yandex.ru' },
-        { rel: 'preconnect', href: 'https://www.googletagmanager.com' },
-        { rel: 'dns-prefetch', href: 'https://www.googletagmanager.com' },
+        // Preconnect к mc.yandex.ru убран: соединение с трекер-доменом не устанавливается
+        // до согласия на cookie (152-ФЗ). Метрика подключается только после «Принять».
       ],
     },
   },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { contacts } = useAppConfig()
+const { contacts, formMaintenance } = useAppConfig()
 
 const phoneSvg =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h3l1.7 4.2-2.1 1.6a13 13 0 0 0 6.6 6.6l1.6-2.1L21 16v3a2 2 0 0 1-2.2 2A17.5 17.5 0 0 1 3 5.2 2 2 0 0 1 5 4z"/></svg>'
@@ -262,7 +262,15 @@ function resetForm() {
         </div>
 
         <div class="form-card" data-reveal-item data-scroll-mode="fade-right">
-          <Transition name="swap" mode="out-in">
+          <div v-if="formMaintenance" class="form-maintenance">
+            <span class="form-maintenance__ic" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+            </span>
+            <h3>Свяжитесь удобным способом</h3>
+            <p>Опишите ситуацию звонком или в мессенджере — отвечу лично, оценю перспективы и подскажу, как вернуть доступ к деньгам. Первичная консультация — бесплатно.</p>
+            <a :href="`tel:${contacts.phoneHref}`" class="btn btn--primary btn--block btn--lg">Позвонить {{ contacts.phone }}</a>
+          </div>
+          <Transition v-else name="swap" mode="out-in">
           <form v-if="!sent" key="form" ref="formEl" class="form" novalidate @submit.prevent="submit">
             <h3 class="form__title">Оставить заявку на разблокировку</h3>
             <p class="form__sub">Заполните форму — свяжусь с вами в ближайшее время.</p>
@@ -594,6 +602,26 @@ function resetForm() {
   align-items: center;
   justify-content: center;
 }
+
+/* Заглушка формы на техобслуживании */
+.form-maintenance {
+  text-align: center;
+  padding: 26px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.form-maintenance__ic {
+  width: 68px; height: 68px;
+  margin-bottom: 18px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--blue-50);
+  color: var(--blue-600);
+}
+.form-maintenance__ic svg { width: 32px; height: 32px; }
+.form-maintenance h3 { font-size: 21px; margin-bottom: 10px; }
+.form-maintenance p { font-size: 15px; color: var(--text); line-height: 1.6; margin-bottom: 22px; max-width: 340px; }
 .form-success__ic {
   width: 72px; height: 72px;
   margin: 0 auto 18px;

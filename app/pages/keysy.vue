@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { cases } from '~/composables/useCases'
 
-const siteUrl = 'https://yuristpro1.ru'
+const siteUrl = 'https://yuristpro1.site'
 const total = cases.length
 
 const title = `Кейсы разблокировки карт и счетов (${total}) — Руслан Ганеев`

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { contacts, legal } = useAppConfig()
 
-const siteUrl = 'https://yuristpro1.ru'
+const siteUrl = 'https://yuristpro1.site'
 
 const title = 'Разблокировка карт и счетов по 115-ФЗ и 161-ФЗ — юрист | Руслан Ганеев'
 const description =

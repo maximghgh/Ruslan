@@ -1,16 +1,20 @@
-// Аналитика: Яндекс.Метрика и Google Analytics (GA4).
-// Подключаются только если в app.config.ts → seo заданы ID. Иначе ничего не грузится.
-// Тяжёлая инициализация откладывается до простоя браузера, чтобы не конкурировать с LCP/INP.
+// Аналитика: только Яндекс.Метрика (российская, данные в РФ).
+// Google Analytics убран по 152-ФЗ (иностранная аналитика, передача данных за границу).
+// ВАЖНО (152-ФЗ, «согласие до обработки»): счётчик грузится ТОЛЬКО после того, как
+// пользователь нажал «Принять» в cookie-баннере (см. app/components/CookieConsent.vue).
+// До согласия — ни одного запроса к mc.yandex.ru.
 export default defineNuxtPlugin(() => {
-  const { seo } = useAppConfig() as { seo?: { yandexMetrika?: string; googleAnalytics?: string } }
+  const { seo } = useAppConfig() as { seo?: { yandexMetrika?: string } }
   const w = window as unknown as Record<string, unknown> & { dataLayer?: unknown[] }
   const router = useRouter()
 
   const metrika = seo?.yandexMetrika
-  const ga = seo?.googleAnalytics
-  if (!metrika && !ga) return
+  if (!metrika) return
 
+  let initialized = false
   const init = () => {
+    if (initialized) return
+    initialized = true
     // ===== Яндекс.Метрика =====
     if (metrika) {
       ;(function (m: any, e: Document, t: string, r: string, i: string) {
@@ -33,28 +37,25 @@ export default defineNuxtPlugin(() => {
         webvisor: false, // запись сессий выключена — тяжёлая для CWV; включайте точечно для отладки
       })
     }
-
-    // ===== Google Analytics (GA4) =====
-    if (ga) {
-      const s = document.createElement('script')
-      s.async = true
-      s.src = `https://www.googletagmanager.com/gtag/js?id=${ga}`
-      document.head.appendChild(s)
-      w.dataLayer = w.dataLayer || []
-      const gtag = (...args: unknown[]) => {
-        w.dataLayer!.push(args)
-      }
-      ;(w as Record<string, unknown>).gtag = gtag
-      gtag('js', new Date())
-      gtag('config', ga)
-    }
   }
 
-  // Откладываем загрузку счётчиков до простоя браузера (или до таймаута).
-  const ric = (w as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
-    .requestIdleCallback
-  if (typeof ric === 'function') ric(init, { timeout: 3000 })
-  else window.setTimeout(init, 1500)
+  // Загрузку откладываем до простоя браузера (или до таймаута), чтобы не мешать LCP/INP.
+  const schedule = () => {
+    const ric = (w as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+      .requestIdleCallback
+    if (typeof ric === 'function') ric(init, { timeout: 3000 })
+    else window.setTimeout(init, 1500)
+  }
+
+  // 152-ФЗ: счётчик грузится ТОЛЬКО после согласия на cookie.
+  let consent: string | null = null
+  try { consent = localStorage.getItem('cookie_consent') } catch { /* нет доступа */ }
+  if (consent === 'accepted') {
+    schedule()
+  } else {
+    // ждём нажатия «Принять» в cookie-баннере
+    window.addEventListener('cookie-consent-accepted', schedule, { once: true })
+  }
 
   // Учёт переходов между страницами (SPA): первый просмотр уже учтён при init.
   let first = true
@@ -65,9 +66,6 @@ export default defineNuxtPlugin(() => {
     }
     if (metrika && typeof w.ym === 'function') {
       ;(w.ym as (...a: unknown[]) => void)(Number(metrika), 'hit', to.fullPath)
-    }
-    if (ga && typeof w.gtag === 'function') {
-      ;(w.gtag as (...a: unknown[]) => void)('event', 'page_view', { page_path: to.fullPath })
     }
   })
 })
